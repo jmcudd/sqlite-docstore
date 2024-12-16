@@ -3,9 +3,9 @@
 A lightweight, MongoDB-like JSON document storage system powered by SQLite, designed for developers who need efficient document-based storage without the overhead of a dedicated NoSQL database like MongoDB. This library combines the simplicity of SQLite with robust JSON querying capabilities to provide a modern, performant, and flexible document store solution.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Node Version](https://img.shields.io/node/v22.11.0/sqlite-docstore.svg)](https://nodejs.org)
+[![Node Version](https://img.shields.io/node/v/sqlite-docstore.svg)](https://nodejs.org)
 [![GitHub Issues](https://img.shields.io/github/issues/jmcudd/sqlite-docstore)](https://github.com/jmcudd/sqlite-docstore/issues)
-[![NPM Version](https://img.shields.io/npm/v1.0.1/sqlite-docstore.svg)](https://www.npmjs.com/package/sqlite-docstore)
+[![NPM Version](https://img.shields.io/npm/v/sqlite-docstore.svg)](https://www.npmjs.com/package/sqlite-docstore)
 
 ## Features
 
@@ -44,7 +44,7 @@ To install via **yarn**:
 yarn add sqlite-docstore
 ```
 
-The library requires **Node.js v14 or higher**.
+The library requires **Node.js v22 or higher**.
 
 ---
 

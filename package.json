@@ -8,13 +8,7 @@
     "test": "mocha --no-colors ./src/index.test.js",
     "test-watch": "nodemon --watch ./src --exec \"mocha --no-colors ./src/index.test.js\""
   },
-  "keywords": [
-    "mongodb",
-    "sqlite",
-    "json",
-    "database",
-    "docstore"
-  ],
+  "keywords": ["mongodb", "sqlite", "json", "database", "docstore"],
   "author": "John Cudd",
   "license": "MIT",
   "repository": {
@@ -30,7 +24,7 @@
     "uuid": "^11.0.3"
   },
   "engines": {
-    "node": ">=14"
+    "node": ">=22"
   },
   "funding": {
     "type": "github",
