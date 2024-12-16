@@ -1,57 +1,62 @@
 import sqlite3 from "better-sqlite3";
 import { v4 as uuidv4 } from "uuid"; // Import UUID generator
 /**
- * @typedef {Object} SqliteDocstoreFunctions
- * @property {sqlite3.Database} db - Exposing SQLite connection.
- * @property {(collectionName: string) => void} createCollection - Creates a collection (SQLite table).
- * @property {(collectionName: string, field: string, options?: object) => { acknowledged: boolean }} createIndex - Creates an index on a JSON field.
- * @property {(collectionName: string, document: object) => { acknowledged: boolean, insertedId: string }} insertOne - Inserts one document.
- * @property {(collectionName: string, documents: object[]) => { acknowledged: boolean, insertedCount: number }} insertMany - Inserts multiple documents.
- * @property {(collectionName: string, query?: object) => object[]} find - Finds all matching documents with a Mongo-style query.
- * @property {(collectionName: string, query?: object) => object | null} findOne - Finds a single matching document.
- * @property {(collectionName: string, id: string) => object | null} findById - Finds a document based on its `_id`.
- * @property {(collectionName: string, query: object) => object[]} findWithIn - Matches `$in` operator on fields.
- * @property {(collectionName: string, query: object) => object[]} findWithRegex - Executes regex-based queries.
- * @property {(collectionName: string, query: object, update: { $set: object }) => { acknowledged: boolean, modifiedCount: number }} updateOne - Updates a single matching document.
- * @property {(collectionName: string, query: object) => { acknowledged: boolean, deletedCount: number }} deleteOne - Deletes a single document matching the query.
- * @property {(collectionName: string, query?: object) => number} countDocuments - Counts documents matching the query.
- * @property {(collectionName: string, field: string) => any[]} distinct - Retrieves distinct values for a field.
- * @property {(oldName: string, newName: string) => { acknowledged: boolean }} renameCollection - Renames a collection.
- * @property {(collectionName: string) => { acknowledged: boolean }} dropCollection - Drops a collection (removes the table).
- * @property {(collectionName: string, pipeline: object[]) => object[]} aggregate - Executes aggregation pipelines with `$match` and `$group`.
- */
-
-/**
  * A JSON-based database abstraction layer mimicking MongoDB's API, powered by SQLite.
  * This library provides a MongoDB-style API to interact with an SQLite database, allowing users
- * to store, retrieve, update, and delete JSON documents inside a single SQLite file or in-memory database.
- * It is lightweight and supports advanced features like indexing, schema validation, array operations,
- * and aggregations.
+ * to store, query, update, and delete JSON documents inside a single SQLite file or in-memory database.
  *
- * Functions are designed to mimic MongoDB's functionality wherever possible,
- * while being translated into equivalent SQLite queries.
+ * Designed to leverage SQLite's JSON capabilities, this package provides a lightweight, modern solution
+ * for applications that require document-based data storage and manipulation without the overhead of a dedicated document database like MongoDB.
  *
  * ## Features:
- * - **Document Storage:** Store JSON documents in collections backed by SQLite tables.
- * - **Querying:** Execute rich queries including equality, `$in`, and partial regex matches.
- * - **Insert/Update/Delete:** Perform single or bulk operations with support for `$set` updates,
- *    atomic push/pull for arrays, and upserts.
- * - **Indexing:** Create indexes on JSON document fields to optimize query performance.
- * - **Schema Validation:** Enforce schemas with custom validation rules using triggers.
- * - **Aggregations:** Support `$match` and `$group` stages for advanced data processing.
- * - **Collection Operations:** Manage collections with operations like rename, drop, and count.
- * - **In-Memory and Persistent Storage:** Use an SQLite file for persistence or in-memory mode for temporary storage.
+ * - **Document Storage:** Store and retrieve JSON documents in collections (which are represented as SQLite tables).
+ * - **Full Querying Capabilities:** Query documents using equality conditions, `$in` operator, regular expressions, and logical operators.
+ * - **Insert/Update/Delete:** Handle CRUD operations for single or multiple documents with structured queries.
+ * - **Indexing:** Optimize performance by creating SQLite indexes on specific fields within documents.
+ * - **Schema and Constraints:** Utilize SQLite's triggers and constraints to enforce lightweight schema validations.
+ * - **Aggregation:** Perform aggregation operations like `$group` and `$match` for summarizing data.
+ * - **In-Memory and Persistent Options:** Choose between an in-memory database (ephemeral) or a file-based SQLite database (persistent).
  *
- * ## Implementation Details:
- * - Each "collection" is an SQLite table consisting of:
- *     - `_id`: A unique primary key for the document.
- *     - `document`: A JSON column containing the full document.
- * - SQLite's JSON functions (`json_extract`, `json_set`, etc.) are used extensively for document manipulation.
- * - The UUID library (`uuid`) is used to generate unique document identifiers.
+ * ## Core Concepts:
+ * - Each "collection" in this API corresponds to a table within the SQLite database, with two key columns:
+ *   - `_id`: A unique identifier for the document (primary key).
+ *   - `document`: A JSON column that stores the full document structure.
+ * - SQLite's robust JSON functions (e.g., `json_extract`, `json_set`) are utilized for querying and updating.
+ * - Document `_id`s are automatically generated using UUIDs if not provided.
  *
+ * ## SQLiteDocstoreFunctions:
+ * Describes the interface for interacting with the SQLite-backed document database.
+ *
+ * @typedef {Object} SqliteDocstoreFunctions
+ * @property {sqlite3.Database} db - The SQLite raw database connection.
+ * @property {(collectionName: string) => void} createCollection - Creates a new collection (table) for storing JSON documents.
+ * @property {(collectionName: string, field: string, options?: object) => { acknowledged: boolean }} createIndex - Creates an index for efficient querying on a specific JSON field.
+ * @property {(collectionName: string, document: object) => { acknowledged: boolean, insertedId: string }} insertOne - Inserts a single document into a collection.
+ * @property {(collectionName: string, documents: object[]) => { acknowledged: boolean, insertedCount: number }} insertMany - Inserts multiple documents into a collection in a single transaction.
+ * @property {(collectionName: string, query?: object) => object[]} find - Finds all documents matching a query. Returns all documents if no query is provided.
+ * @property {(collectionName: string, query?: object) => object | null} findOne - Finds the first document matching a query or `null` if none is found.
+ * @property {(collectionName: string, id: string) => object | null} findById - Finds a document based on its `_id` (primary key). Returns `null` if not found.
+ * @property {(collectionName: string, query: object) => object[]} findWithIn - Finds documents that match the `$in` operator on the specified fields.
+ * @property {(collectionName: string, query: object) => object[]} findWithRegex - Finds documents that match a regular expression condition.
+ * @property {(collectionName: string, query: object, update: { $set: object }) => { acknowledged: boolean, modifiedCount: number }} updateOne - Updates the first document that matches a query using a `$set` update operator.
+ * @property {(collectionName: string, query: object) => { acknowledged: boolean, deletedCount: number }} deleteOne - Deletes the first document that matches the query. Returns the number of documents deleted.
+ * @property {(collectionName: string, query?: object) => number} countDocuments - Counts the number of documents that match the query. If no query is provided, counts all documents in the collection.
+ * @property {(collectionName: string, field: string) => any[]} distinct - Returns an array of distinct values for a specific JSON field within a collection.
+ * @property {(oldName: string, newName: string) => { acknowledged: boolean }} renameCollection - Renames a collection (table) from `oldName` to `newName`.
+ * @property {(collectionName: string) => { acknowledged: boolean }} dropCollection - Drops (deletes) a collection (table) and all its documents.
+ * @property {(collectionName: string, pipeline: object[]) => object[]} aggregate - Performs aggregation queries with support for `$match` (filter) and `$group` (grouping and aggregation) stages.
  */
 
 /**
+ * Provides a lightweight, MongoDB-like JSON document storage system
+ * backed by an SQLite database. All functions mimic MongoDB-style
+ * commands, enabling compatibility with existing MongoDB-based code
+ * with minimal changes.
+ *
+ * Additional Notes:
+ * - Initialization requires setting up a file-based or in-memory SQLite instance.
+ * - The library assumes SQLite 3.9+ for JSON support.
+ *
  * @type {{
  *   init: (fileName?: string | null) => SqliteDocstoreFunctions
  * }}
