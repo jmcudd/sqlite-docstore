@@ -1,6 +1,6 @@
 {
   "name": "sqlite-docstore",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A MongoDB-like JSON abstraction with SQLite backend",
   "main": "src/index.js",
   "type": "module",
