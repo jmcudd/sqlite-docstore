@@ -1,0 +1,50 @@
+{
+  "name": "sqlite-docstore",
+  "version": "1.0.0",
+  "description": "A MongoDB-like JSON abstraction with SQLite backend",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha --no-colors ./src/index.test.js",
+    "test-watch": "nodemon --watch ./src --exec \"mocha --no-colors ./src/index.test.js\""
+  },
+  "keywords": [
+    "mongodb",
+    "sqlite",
+    "json",
+    "database",
+    "docstore"
+  ],
+  "author": "John Cudd",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jmcudd/sqlite-docstore.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jmcudd/sqlite-docstore/issues"
+  },
+  "homepage": "https://github.com/jmcudd/sqlite-docstore#readme",
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "uuid": "^11.0.3"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/jmcudd"
+  },
+  "contributors": [
+    {
+      "name": "John Cudd",
+      "email": "jmcudd@gmail.com",
+      "url": "https://johncudd.com"
+    }
+  ],
+  "devDependencies": {
+    "mocha": "^11.0.1",
+    "nodemon": "^3.1.9"
+  }
+}
