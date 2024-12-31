@@ -5,6 +5,7 @@ import { sqliteDocstore } from "./index.js";
 // Initialize the database
 const db = sqliteDocstore.init();
 const collectionName = "testCollection";
+console.log("db", db);
 
 describe("SQLite Docstore Tests", () => {
   // Runs before the test suite
@@ -15,7 +16,7 @@ describe("SQLite Docstore Tests", () => {
 
   // Runs after the entire test suite
   after(async () => {
-    db.db.close(); // Cleanly close the database connection
+    db.dropCollection(collectionName); // Cleanly close the database connection
   });
 
   describe("Document Insertion and Retrieval", () => {

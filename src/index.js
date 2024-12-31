@@ -1,5 +1,26 @@
-import sqlite3 from "better-sqlite3";
 import { v4 as uuidv4 } from "uuid"; // Import UUID generator
+let Database;
+
+try {
+  if (typeof Bun !== "undefined") {
+    const module = await import("bun:sqlite");
+    Database = module.default;
+    console.log("Running in Bun");
+  } else if (
+    typeof process !== "undefined" &&
+    process.release &&
+    process.release.name === "node"
+  ) {
+    const module = await import("better-sqlite3");
+    Database = module.default;
+    console.log("Running in Node.js");
+  } else {
+    throw new Error("Unknown environment. Cannot determine if Bun or Node.js.");
+  }
+} catch (error) {
+  console.error("Error during loading:", error);
+}
+
 /**
  * A JSON-based database abstraction layer mimicking MongoDB's API, powered by SQLite.
  * This library provides a MongoDB-style API to interact with an SQLite database, allowing users
@@ -71,23 +92,23 @@ export const sqliteDocstore = {
    */
   init: (fileName = null) => {
     // Create a new SQLite connection: persistent (file) or in-memory
-    const db = sqlite3(fileName || ":memory:");
+    const db = new Database(fileName || ":memory:");
 
     // defines REGEXP behavior for SQLite
-    db.function("REGEXP", (pattern, value) => {
+    db.REGEXP=(pattern, value) => {
       try {
         return new RegExp(pattern).test(value) ? 1 : 0;
       } catch (e) {
         return 0; // If invalid regex, always return false
       }
-    });
+    };
 
     // Return the Mongo-like interface for database operations
     return {
-      db, // Expose the raw SQLite connection for advanced operations if needed
+      db: db, // Expose the raw SQLite connection for advanced operations if needed
 
-      createCollection: (collectionName) => {
-        db.exec(
+      createCollection: function (collectionName) {
+        this.db.exec(
           `CREATE TABLE IF NOT EXISTS ${collectionName} (
              _id TEXT PRIMARY KEY,
              document JSON
@@ -95,30 +116,30 @@ export const sqliteDocstore = {
         );
       },
 
-      createIndex: (collectionName, field, options = {}) => {
+      createIndex: function (collectionName, field, options = {}) {
         const jsonField = `json_extract(document, '$.${field}')`; // Extract field for indexing
         const unique = options.unique ? "UNIQUE" : ""; // Support unique indexes
         const indexName = `idx_${collectionName}_${field}`;
-        db.exec(
+        this.db.exec(
           `CREATE ${unique} INDEX IF NOT EXISTS ${indexName} ON ${collectionName} (${jsonField})`
         );
         return { acknowledged: true };
       },
 
-      insertOne: (collectionName, document) => {
+      insertOne: function (collectionName, document) {
         const id = document._id || uuidv4();
-        const stmt = db.prepare(
+        const stmt = this.db.prepare(
           `INSERT INTO ${collectionName} (_id, document) VALUES (?, ?)`
         );
         stmt.run(id, JSON.stringify({ ...document, _id: id }));
         return { acknowledged: true, insertedId: id };
       },
 
-      insertMany: (collectionName, documents) => {
-        const stmt = db.prepare(
+      insertMany: function (collectionName, documents) {
+        const stmt = this.db.prepare(
           `INSERT INTO ${collectionName} (_id, document) VALUES (?, ?)`
         );
-        db.transaction(() => {
+        this.db.transaction(() => {
           for (const doc of documents) {
             const id = doc._id || uuidv4();
             stmt.run(id, JSON.stringify({ ...doc, _id: id }));
@@ -127,7 +148,7 @@ export const sqliteDocstore = {
         return { acknowledged: true, insertedCount: documents.length };
       },
 
-      find: (collectionName, query = {}) => {
+      find: function (collectionName, query = {}) {
         try {
           // Build SQL query conditions for the WHERE clause
           const conditions = Object.entries(query)
@@ -136,7 +157,7 @@ export const sqliteDocstore = {
 
           const params = Object.values(query); // Bind only values, keys are encoded in SQL
 
-          const stmt = db.prepare(`
+          const stmt = this.db.prepare(`
       SELECT _id, document FROM ${collectionName} 
       ${conditions ? `WHERE ${conditions}` : ""}
     `);
@@ -170,14 +191,14 @@ export const sqliteDocstore = {
         }
       },
 
-      findById: (collectionName, id) => {
-        const stmt = db.prepare(
+      findById: function (collectionName, id) {
+        const stmt = this.db.prepare(
           `SELECT _id, document FROM ${collectionName} WHERE _id = ?`
         );
         const row = stmt.get(id);
         return row ? { _id: row._id, ...JSON.parse(row.document) } : null;
       },
-      findWithIn: (collectionName, query) => {
+      findWithIn: function (collectionName, query) {
         const params = [];
         const conditions = Object.entries(query)
           .map(([key, value]) => {
@@ -190,13 +211,13 @@ export const sqliteDocstore = {
           })
           .join(" AND ");
 
-        const stmt = db.prepare(
+        const stmt = this.db.prepare(
           `SELECT _id, document FROM ${collectionName} WHERE ${conditions}`
         );
 
         return stmt.all(...params).map((row) => JSON.parse(row.document));
       },
-      findWithRegex: (collectionName, query) => {
+      findWithRegex: function (collectionName, query) {
         const params = [];
         const conditions = Object.entries(query)
           .map(([key, value]) => {
@@ -208,13 +229,13 @@ export const sqliteDocstore = {
           })
           .join(" AND ");
 
-        const stmt = db.prepare(
+        const stmt = this.db.prepare(
           `SELECT _id, document FROM ${collectionName} WHERE ${conditions}`
         );
         return stmt.all(...params).map((row) => JSON.parse(row.document));
       },
 
-      updateOne: (collectionName, query, update) => {
+      updateOne: function (collectionName, query, update) {
         if (!update.$set) {
           throw new Error("Only `$set` updates are supported");
         }
@@ -235,7 +256,7 @@ export const sqliteDocstore = {
 
         const updateValues = updateFields.map(([_, value]) => value);
 
-        const stmt = db.prepare(
+        const stmt = this.db.prepare(
           `UPDATE ${collectionName} SET ${setStatements} WHERE ${conditions} LIMIT 1`
         );
 
@@ -243,7 +264,7 @@ export const sqliteDocstore = {
         return { acknowledged: true, modifiedCount: result.changes };
       },
 
-      deleteOne: (collectionName, query) => {
+      deleteOne: function (collectionName, query) {
         const conditions = Object.entries(query)
           .map(([_]) => `json_extract(document, ?) = ?`)
           .join(" AND ");
@@ -253,7 +274,7 @@ export const sqliteDocstore = {
           value,
         ]);
 
-        const stmt = db.prepare(
+        const stmt = this.db.prepare(
           `DELETE FROM ${collectionName} WHERE ${conditions} LIMIT 1`
         );
 
@@ -261,7 +282,7 @@ export const sqliteDocstore = {
         return { acknowledged: true, deletedCount: result.changes };
       },
 
-      countDocuments: (collectionName, query = {}) => {
+      countDocuments: function (collectionName, query = {}) {
         const conditions = Object.entries(query)
           .map(([_]) => `json_extract(document, ?) = ?`)
           .join(" AND ");
@@ -271,7 +292,7 @@ export const sqliteDocstore = {
           value,
         ]);
 
-        const stmt = db.prepare(
+        const stmt = this.db.prepare(
           `SELECT COUNT(*) as count FROM ${collectionName} ${
             conditions ? `WHERE ${conditions}` : ""
           }`
@@ -281,8 +302,8 @@ export const sqliteDocstore = {
         return row.count;
       },
 
-      distinct: (collectionName, field) => {
-        const stmt = db.prepare(`
+      distinct: function (collectionName, field) {
+        const stmt = this.db.prepare(`
           SELECT DISTINCT json_extract(document, '$.${field}') as value 
           FROM ${collectionName}
         `);
@@ -290,18 +311,20 @@ export const sqliteDocstore = {
         return rows.map((row) => row.value);
       },
 
-      renameCollection: (oldName, newName) => {
-        const stmt = db.prepare(`ALTER TABLE ${oldName} RENAME TO ${newName}`);
+      renameCollection: function (oldName, newName) {
+        const stmt = this.db.prepare(
+          `ALTER TABLE ${oldName} RENAME TO ${newName}`
+        );
         stmt.run();
         return { acknowledged: true };
       },
 
-      dropCollection: (collectionName) => {
-        const stmt = db.prepare(`DROP TABLE IF EXISTS ${collectionName}`);
+      dropCollection: function (collectionName) {
+        const stmt = this.db.prepare(`DROP TABLE IF EXISTS ${collectionName}`);
         stmt.run();
         return { acknowledged: true };
       },
-      aggregate: (collectionName, pipeline) => {
+      aggregate: function (collectionName, pipeline) {
         let baseQuery = `SELECT document FROM ${collectionName}`;
         let groupClause = ""; // For GROUP BY
         const params = [];
@@ -396,7 +419,7 @@ export const sqliteDocstore = {
         //console.log("Generated Query:", finalQuery);
         //console.log("Query Parameters:", params);
 
-        const stmt = db.prepare(finalQuery);
+        const stmt = this.db.prepare(finalQuery);
         return stmt.all(...params);
       },
     };
